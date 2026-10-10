@@ -79,7 +79,6 @@ h1,h2{font-family:var(--titre);text-wrap:balance;margin:0;line-height:1.05}
 #billetEnigme{transform:rotate(-.6deg);max-height:38vh;overflow-y:auto}
 .rangee{display:flex;gap:10px}
 .rangee .btn-2{background:#0d2b30d9;box-shadow:inset 0 0 0 2px #ffffff30;flex:1}
-#btnAide{background:var(--safran);color:#2a1d00;box-shadow:none;font-weight:800}
 .bandeau{background:#0d2b30f2;border-left:4px solid var(--safran);padding:10px 14px;border-radius:4px;font-size:.95rem}
 
 
@@ -126,7 +125,6 @@ input[type=range]{width:100%;accent-color:var(--safran)}
   <ul class="regles">
     <li>Lisez l'énigme, devinez l'objet, puis cadrez-le dans le viseur.</li>
     <li>Si c'est le bon, l'énigme suivante apparaît sur l'écran.</li>
-    <li>Bloqués trop longtemps ? Un coup de pouce finit par arriver.</li>
   </ul>
   <div class="bas">
     <div class="bandeau" id="noteBrouillon" hidden>Nouveau jeu en préparation sur ce téléphone : les énigmes ne sont pas encore écrites.</div>
@@ -149,11 +147,9 @@ input[type=range]{width:100%;accent-color:var(--safran)}
   </div>
   <div class="viseur" id="viseur"><b></b><b></b><b></b><b></b><div class="etat" id="etat">Je cherche…</div></div>
   <div class="pied">
-    <div class="bandeau" id="bandeau" hidden></div>
     <div class="billet" id="billetEnigme"><p class="surtitre" id="enigmeTitre"></p><p id="enigme"></p></div>
     <div class="rangee">
       <button class="btn btn-2" id="btnMasquer">Masquer l'énigme</button>
-      <button class="btn btn-2" id="btnAide" hidden>Coup de pouce</button>
     </div>
   </div>
 
@@ -212,8 +208,6 @@ input[type=range]{width:100%;accent-color:var(--safran)}
     <h3>Sensibilité</h3>
     <input type="range" id="sens" min="-2" max="2" step="1" value="0" aria-label="Sensibilité">
     <p id="sensTxt"></p>
-    <label class="champ">Délai avant le coup de pouce (secondes)
-      <input type="number" id="delai" min="5" max="900" step="5" style="width:5.5em"></label>
   </section>
 </main>
 
@@ -240,7 +234,6 @@ let brouillon = mem.lire("brouillon", null);   // nouveau jeu en préparation su
 let PACK = null;                               // jeu publié (pack.json)
 const sauver = () => { mem.ecrire("partie", partie); mem.ecrire("reglages", reglages); };
 const sauverBrouillon = () => { const ok = mem.ecrire("brouillon", brouillon); const e = $("erreurP"); e.hidden = ok; if (!ok) e.textContent = "Mémoire du téléphone pleine : cette vue n'a pas pu être enregistrée."; return ok; };
-const delaiAide = () => (reglages.delai || CFG.delaiAide || 120) * 1000;
 
 /* ---------- Empreintes ---------- */
 const DIM = REFS.dim, S = REFS.size;
@@ -349,17 +342,7 @@ function afficherEtape(){
   $("fin").hidden = true;
   $("enigmeTitre").textContent = "Énigme " + (i+1);
   $("enigme").textContent = ETAPES[i].enigme;
-  majAide();
 }
-function majAide(){
-  const i = partie.etape; if (i >= N) return;
-  const indice = ETAPES[i].indice2;
-  const mur = partie.t0 && Date.now() - partie.t0 >= delaiAide();
-  $("btnAide").hidden = partie.aide || !mur || !indice;
-  $("bandeau").hidden = !(partie.aide && indice);
-  if (partie.aide && indice) $("bandeau").textContent = "Coup de pouce : " + indice;
-}
-setInterval(() => { if (!$("jeu").hidden && !enPause) majAide(); }, 1000);
 function objetTrouve(){
   const trouve = ETAPES[partie.etape];
   partie.etape++; partie.aide = false; partie.t0 = Date.now(); sauver();
@@ -371,7 +354,6 @@ function objetTrouve(){
   $("trouve").hidden = false;
 }
 $("btnSuite").onclick = () => { partie.t0 = Date.now(); sauver(); afficherEtape(); enPause = false; };
-$("btnAide").onclick = () => { partie.aide = true; sauver(); majAide(); };
 $("btnMasquer").onclick = () => { const b = $("billetEnigme"); b.hidden = !b.hidden; $("btnMasquer").textContent = b.hidden ? "Relire l'énigme" : "Masquer l'énigme"; };
 $("btnRejouer").onclick = () => { recommencer(); afficherEtape(); enPause = false; };
 function recommencer(){ partie = {etape:0, aide:false, t0:Date.now(), pack:packId}; historique = []; sauver(); }
@@ -440,7 +422,6 @@ function dessinerParents(){
   $("btnNouveau").textContent = "Réinitialiser les 5 objets"; armeReset = 0;
   $("btnAbandon").hidden = !b || !PACK;
   $("sens").value = reglages.sens; majSens();
-  $("delai").value = Math.round(delaiAide()/1000);
 }
 function majSens(){ $("sensTxt").textContent = ["Très strict : moins de fausses alertes, il faut bien cadrer.", "Strict.", "Normal.", "Tolérant.", "Très tolérant : reconnaît plus facilement, mais peut se tromper."][+reglages.sens + 2]; }
 function majScores(vu){
@@ -487,7 +468,6 @@ $("btnEnvoi").onclick = () => {
   $("etatEnvoi").textContent = "Fichier « chasse-pack.json » enregistré dans les Téléchargements (" + Math.round(txt.length/1024) + " Ko). Joignez-le dans la conversation avec Claude.";
 };
 $("sens").oninput = e => { reglages.sens = +e.target.value; majSens(); sauver(); };
-$("delai").onchange = e => { const v = +e.target.value; if (v >= 5){ reglages.delai = v; sauver(); } };
 
 /* ---------- Démarrage ---------- */
 (async () => {
