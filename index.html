@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d2b30">
+<title>La Chasse aux Cinq Objets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
+<style>
+/* Mise en page : la caméra occupe tout l'écran ; les énigmes sont des billets de papier posés par-dessus. Un seul thème, sombre, par choix. */
+:root{
+  --encre:#0d2b30;         /* fond, bleu pétrole profond */
+  --encre-2:#16424a;       /* surfaces sur le fond */
+  --papier:#f3ecd9;        /* billets d'énigme */
+  --papier-ombre:#d9cfb4;
+  --texte-papier:#23302f;
+  --texte:#e9f1ee;
+  --texte-doux:#a9c2bf;
+  --safran:#f2b33d;        /* accent : actions, flèches */
+  --corail:#ef6f53;        /* tampon « Trouvé » */
+  --titre:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --corps:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--encre);color:var(--texte);font:400 17px/1.5 var(--corps);overflow:hidden;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--safran);outline-offset:3px}
+h1,h2{font-family:var(--titre);text-wrap:balance;margin:0;line-height:1.05}
+
+.ecran{position:fixed;inset:0;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 20px) 20px calc(env(safe-area-inset-bottom,0px) + 20px)}
+
+/* ---------- Accueil ---------- */
+#accueil{justify-content:space-between;gap:24px;overflow-y:auto;
+  background:radial-gradient(120% 70% at 80% 0%,#1d5a5f 0%,transparent 60%),var(--encre)}
+#accueil h1{font-size:clamp(2.6rem,13vw,4.4rem);font-weight:800;letter-spacing:-.02em}
+#accueil h1 em{font-style:normal;color:var(--safran)}
+.surtitre{font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--texte-doux);margin:0 0 10px}
+.regles{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;max-width:34em;color:var(--texte)}
+.regles li{padding-left:18px;position:relative}
+.regles li::before{content:"";position:absolute;left:0;top:.62em;width:8px;height:8px;border-radius:50%;background:var(--safran)}
+.bas{display:flex;flex-direction:column;gap:12px}
+.btn{display:block;width:100%;padding:16px 20px;border-radius:14px;background:var(--safran);color:#2a1d00;font:800 1.15rem var(--titre);text-align:center}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.55;cursor:default}
+.btn-2{background:transparent;color:var(--texte);box-shadow:inset 0 0 0 2px var(--encre-2);font-weight:600;font-size:1rem;padding:12px 16px}
+.charge{font-size:.9rem;color:var(--texte-doux);min-height:1.5em}
+.jauge{height:6px;border-radius:3px;background:var(--encre-2);overflow:hidden}
+.jauge i{display:block;height:100%;width:0;background:var(--safran);transition:width .2s}
+.erreur{background:#4a1f1a;color:#ffd9d0;padding:12px 14px;border-radius:10px;font-size:.95rem}
+.lien-parents{align-self:center;font-size:.85rem;color:var(--texte-doux);padding:8px 12px;text-decoration:underline;text-underline-offset:3px}
+
+/* ---------- Jeu ---------- */
+#jeu{padding:0;background:#000}
+#video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.voile{position:absolute;inset:0;pointer-events:none;background:linear-gradient(#0d2b30cc 0,#0d2b3000 22%,#0d2b3000 50%,#0d2b30e6 100%)}
+.haut{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 0}
+.points{display:flex;gap:8px;align-items:center}
+.points i{width:26px;height:8px;border-radius:4px;background:#ffffff40}
+.points i.fait{background:var(--safran)}
+.points i.cours{background:#fff}
+.compte{font:600 .95rem var(--titre);font-variant-numeric:tabular-nums}
+.viseur{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:70vw;height:70vw;pointer-events:none}
+.viseur b{position:absolute;width:34px;height:34px;border:4px solid #fff;opacity:.9}
+.viseur b:nth-child(1){left:0;top:0;border-right:0;border-bottom:0;border-radius:10px 0 0 0}
+.viseur b:nth-child(2){right:0;top:0;border-left:0;border-bottom:0;border-radius:0 10px 0 0}
+.viseur b:nth-child(3){left:0;bottom:0;border-right:0;border-top:0;border-radius:0 0 0 10px}
+.viseur b:nth-child(4){right:0;bottom:0;border-left:0;border-top:0;border-radius:0 0 10px 0}
+.viseur.chaud b{border-color:var(--safran)}
+.etat{position:absolute;left:0;right:0;bottom:-34px;text-align:center;font-size:.9rem;color:#fff;text-shadow:0 1px 4px #000}
+
+.billet{background:var(--papier);color:var(--texte-papier);border-radius:6px;padding:18px 18px 16px;box-shadow:0 2px 0 var(--papier-ombre),0 14px 30px #0009;font-size:1.05rem;line-height:1.45}
+.billet .surtitre{color:#6c6a55;margin-bottom:6px}
+.billet p{margin:0}
+.pied{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:10px;padding:0 16px calc(env(safe-area-inset-bottom,0px) + 16px)}
+#billetEnigme{transform:rotate(-.6deg);max-height:38vh;overflow-y:auto}
+.rangee{display:flex;gap:10px}
+.rangee .btn-2{background:#0d2b30d9;box-shadow:inset 0 0 0 2px #ffffff30;flex:1}
+#btnAide{background:var(--safran);color:#2a1d00;box-shadow:none;font-weight:800}
+.bandeau{background:#0d2b30f2;border-left:4px solid var(--safran);padding:10px 14px;border-radius:4px;font-size:.95rem}
+
+/* Flèche relais, en surimpression */
+#fleche{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;text-align:center;width:80vw}
+#fleche svg{width:46vw;max-width:240px;height:auto;filter:drop-shadow(0 6px 14px #000a)}
+#fleche .pivot{animation:pousse 1s ease-in-out infinite}
+#fleche strong{font:800 1.6rem var(--titre);color:var(--safran);text-shadow:0 2px 8px #000}
+#fleche span{background:#0d2b30e6;padding:6px 12px;border-radius:8px;font-size:.95rem}
+@keyframes pousse{0%,100%{transform:translateY(8px)}50%{transform:translateY(-10px)}}
+
+/* Billet « Trouvé » */
+#trouve,#fin{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:18px;padding:24px 20px;background:#0d2b30d9;backdrop-filter:blur(3px)}
+#trouve .billet,#fin .billet{position:relative;padding-top:26px;animation:pose .45s cubic-bezier(.2,1.4,.4,1) both}
+.tampon{position:absolute;right:12px;top:-18px;transform:rotate(7deg);border:3px solid var(--corail);color:var(--corail);background:var(--papier);font:800 1.05rem var(--titre);letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:6px}
+#trouve h2,#fin h2{font-size:1.5rem;font-weight:800;margin-bottom:10px}
+@keyframes pose{from{opacity:0;transform:translateY(40px) rotate(-5deg) scale(.9)}to{opacity:1;transform:none}}
+#fin h2{font-size:2.2rem}
+
+/* ---------- Réglages parents ---------- */
+#parents{background:var(--encre);overflow-y:auto;gap:18px;z-index:10}
+#parents h2{font-size:1.5rem}
+#parents section{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--encre-2)}
+#parents h3{margin:0;font:600 1.05rem var(--titre)}
+#parents p{margin:0;color:var(--texte-doux);font-size:.9rem}
+.score{display:grid;grid-template-columns:7.2em 1fr 3em auto;gap:8px;align-items:center;font-size:.9rem}
+.score .barre{height:10px;border-radius:5px;background:var(--encre-2);overflow:hidden}
+.score .barre i{display:block;height:100%;background:var(--texte-doux);width:0}
+.score.vu .barre i{background:var(--safran)}
+.score output{font-variant-numeric:tabular-nums;text-align:right}
+.mini{padding:6px 10px;border-radius:8px;box-shadow:inset 0 0 0 2px var(--encre-2);font-size:.85rem}
+label.champ{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:.95rem}
+select,input[type=text],input[type=number]{font:inherit;color:var(--texte);background:var(--encre-2);border:0;border-radius:8px;padding:8px 10px;min-width:0}
+input[type=text]{width:100%}
+input[type=range]{width:100%;accent-color:var(--safran)}
+#apercu{width:120px;height:120px;border-radius:8px;background:#000;align-self:center}
+@media (prefers-reduced-motion:reduce){#fleche .pivot,#trouve .billet,#fin .billet{animation:none}}
+</style>
+</head>
+<body>
+
+<!-- Accueil -->
+<main class="ecran" id="accueil">
+  <div>
+    <p class="surtitre">Jeu de piste à la maison</p>
+    <h1>La Chasse aux <em>Cinq</em> Objets</h1>
+  </div>
+  <ul class="regles">
+    <li>Lisez l'énigme, devinez l'objet, puis cadrez-le dans le viseur.</li>
+    <li>Si c'est le bon, l'énigme suivante apparaît sur l'écran.</li>
+    <li>Bloqués ? Un coup de pouce finit par arriver : retournez alors voir le dernier objet trouvé, il vous montrera la direction.</li>
+  </ul>
+  <div class="bas">
+    <div class="erreur" id="erreur" hidden></div>
+    <div class="charge" id="charge">Préparation du détecteur…</div>
+    <div class="jauge" id="jauge"><i></i></div>
+    <button class="btn" id="btnGo" disabled>Lancer la chasse</button>
+    <button class="btn btn-2" id="btnReset" hidden>Recommencer depuis le début</button>
+    <button class="lien-parents" id="btnParents">Réglages parents</button>
+  </div>
+</main>
+
+<!-- Jeu -->
+<main class="ecran" id="jeu" hidden>
+  <video id="video" playsinline muted autoplay></video>
+  <div class="voile"></div>
+  <div class="haut">
+    <div class="points" id="points" aria-hidden="true"></div>
+    <div class="compte" id="compte"></div>
+  </div>
+  <div class="viseur" id="viseur"><b></b><b></b><b></b><b></b><div class="etat" id="etat">Je cherche…</div></div>
+  <div id="fleche" hidden>
+    <div class="pivot"><svg id="flecheSvg" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 L90 50 H66 V94 H34 V50 H10 Z" fill="#f2b33d" stroke="#2a1d00" stroke-width="4" stroke-linejoin="round"/></svg></div>
+    <strong id="flecheTxt"></strong>
+    <span id="flecheIndice"></span>
+  </div>
+  <div class="pied">
+    <div class="bandeau" id="bandeau" hidden></div>
+    <div class="billet" id="billetEnigme"><p class="surtitre" id="enigmeTitre"></p><p id="enigme"></p></div>
+    <div class="rangee">
+      <button class="btn btn-2" id="btnMasquer">Masquer l'énigme</button>
+      <button class="btn btn-2" id="btnAide" hidden>Coup de pouce</button>
+    </div>
+  </div>
+
+  <div id="trouve" hidden>
+    <div class="billet">
+      <span class="tampon">Trouvé !</span>
+      <h2 id="trouveNom"></h2>
+      <p class="surtitre">Énigme suivante</p>
+      <p id="trouveEnigme"></p>
+    </div>
+    <button class="btn" id="btnSuite">On continue</button>
+  </div>
+
+  <div id="fin" hidden>
+    <div class="billet">
+      <span class="tampon">5 sur 5</span>
+      <h2>Bravo !</h2>
+      <p id="finTxt"></p>
+    </div>
+    <button class="btn btn-2" id="btnRejouer">Rejouer</button>
+  </div>
+</main>
+
+<!-- Réglages parents -->
+<main class="ecran" id="parents" hidden>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+    <h2>Réglages parents</h2>
+    <button class="mini" id="btnFermer">Fermer</button>
+  </div>
+
+  <section>
+    <h3>Ce que voit le détecteur</h3>
+    <p>Lancez la chasse une fois pour activer la caméra, puis revenez ici. Visez un objet : sa barre doit passer nettement devant les autres et devenir jaune.</p>
+    <canvas id="apercu" width="160" height="160"></canvas>
+    <div id="scores"></div>
+    <p>Si un objet n'est pas reconnu chez vous, visez-le et touchez « + vue » sur sa ligne (2 ou 3 angles suffisent). Si le détecteur se trompe sur un décor, visez ce décor et touchez « + vue » sur la ligne « rien ».</p>
+  </section>
+
+  <section>
+    <h3>Sensibilité</h3>
+    <input type="range" id="sens" min="-2" max="2" step="1" value="0" aria-label="Sensibilité">
+    <p id="sensTxt"></p>
+  </section>
+
+  <section>
+    <h3>Flèches du coup de pouce</h3>
+    <p>Direction à prendre quand on se tient face à l'objet précédent.</p>
+    <div id="fleches" style="display:flex;flex-direction:column;gap:8px"></div>
+    <label class="champ">Délai avant le coup de pouce (secondes)
+      <input type="number" id="delai" min="5" max="900" step="5" style="width:5.5em"></label>
+  </section>
+
+  <section>
+    <h3>Message du trésor</h3>
+    <input type="text" id="tresor" aria-label="Message du trésor">
+  </section>
+
+  <section>
+    <h3>Sauvegarde</h3>
+    <p>Ces réglages restent sur ce téléphone. Pour les mettre sur les téléphones des enfants, copiez-les et envoyez-les à Claude, qui les intégrera au jeu.</p>
+    <button class="btn btn-2" id="btnCopier">Copier mes réglages</button>
+    <textarea id="export" rows="4" hidden style="width:100%;font:12px monospace;background:var(--encre-2);color:var(--texte);border:0;border-radius:8px;padding:8px"></textarea>
+    <button class="btn btn-2" id="btnEffacer">Effacer mes vues ajoutées</button>
+  </section>
+</main>
+
+<canvas id="grab" width="160" height="160" hidden></canvas>
+
+<script src="config.js"></script>
+<script src="refs.js"></script>
+<script>
+"use strict";
+const CFG = window.JEU_CONFIG, ETAPES = CFG.etapes, N = ETAPES.length;
+const $ = id => document.getElementById(id);
+const dormir = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- Mémoire locale (confort uniquement) ---------- */
+const mem = {
+  lire(k, d){ try{ const v = localStorage.getItem("chasse:"+k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  ecrire(k, v){ try{ localStorage.setItem("chasse:"+k, JSON.stringify(v)); }catch(e){} }
+};
+let partie = mem.lire("partie", {etape:0, aide:false, t0:0});
+if (!(partie.etape >= 0 && partie.etape <= N)) partie = {etape:0, aide:false, t0:0};
+let reglages = Object.assign({sens:0, fleches:{}, tresor:"", delai:null, vues:{}}, mem.lire("reglages", {}));
+const sauver = () => { mem.ecrire("partie", partie); mem.ecrire("reglages", reglages); };
+const delaiAide = () => (reglages.delai || CFG.delaiAide || 120) * 1000;
+const flecheDe = i => reglages.fleches[ETAPES[i].id] || ETAPES[i].fleche || "devant";
+const texteTresor = () => reglages.tresor || CFG.tresor;
+
+/* ---------- Empreintes de référence ---------- */
+const DIM = REFS.dim, S = REFS.size;
+function b64versF32(b64){ const bin = atob(b64), u = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i); return new Float32Array(u.buffer); }
+function f32versB64(f){ const u = new Uint8Array(f.buffer.slice(f.byteOffset, f.byteOffset + f.byteLength)); let s = ""; for (let i=0;i<u.length;i++) s += String.fromCharCode(u[i]); return btoa(s); }
+const CLASSES = ETAPES.map(e => e.id).concat("rien");
+const base = {}; for (const e of ETAPES) base[e.id] = b64versF32(REFS.classes[e.id]); base.rien = b64versF32(REFS.neg);
+let refs = {};
+function reconstruireRefs(){
+  for (const c of CLASSES){
+    const extra = (reglages.vues[c] || []).map(b64versF32);
+    const tout = new Float32Array(base[c].length + extra.length * DIM);
+    tout.set(base[c], 0); extra.forEach((v, i) => tout.set(v, base[c].length + i * DIM));
+    refs[c] = tout;
+  }
+}
+reconstruireRefs();
+function meilleur(v, mat){ let best = -1; for (let o = 0; o < mat.length; o += DIM){ let d = 0; for (let i = 0; i < DIM; i++) d += v[i] * mat[o+i]; if (d > best) best = d; } return best; }
+function scores(v){ const s = {}; for (const c of CLASSES) s[c] = meilleur(v, refs[c]); return s; }
+/* Décision : un objet est « vu » si sa ressemblance dépasse le seuil ET devance nettement tout le reste. */
+function decision(sc){
+  const seuil = 0.70 - reglages.sens * 0.04, marge = 0.07 - reglages.sens * 0.015;
+  let top = null, second = -1;
+  for (const c of CLASSES){ if (top === null || sc[c] > sc[top]){ if (top !== null) second = Math.max(second, sc[top]); top = c; } else second = Math.max(second, sc[c]); }
+  return (top !== "rien" && sc[top] >= seuil && sc[top] - second >= marge) ? top : null;
+}
+
+/* ---------- Moteur de vision (OpenCV + MobileNetV2, tout tourne sur le téléphone) ---------- */
+let cvm = null, net = null, moteurPret = false;
+const grab = $("grab"), gctx = grab.getContext("2d", {willReadFrequently:true});
+function progression(p, txt){ $("jauge").firstElementChild.style.width = Math.round(p*100) + "%"; if (txt) $("charge").textContent = txt; }
+async function chargerMoteur(){
+  progression(.05, "Téléchargement du détecteur (27 Mo la première fois)…");
+  let recu = 0; const TOTAL = 27.3e6;
+  const morceau = async nom => {
+    const r = await fetch(nom); if (!r.ok) throw new Error(nom + " introuvable");
+    const lecteur = r.body.getReader(), bouts = [];
+    for(;;){ const {done, value} = await lecteur.read(); if (done) break; bouts.push(value); recu += value.length; progression(.05 + .7 * Math.min(1, recu/TOTAL)); }
+    return new Blob(bouts);
+  };
+  const [o0, o1, m0, m1] = await Promise.all(["opencv-part0.bin", "opencv-part1.bin", "mnv2-part0.bin", "mnv2-part1.bin"].map(morceau));
+  const modeleP = new Blob([m0, m1]).arrayBuffer().then(b => new Uint8Array(b));
+  await new Promise((ok, ko) => { const s = document.createElement("script"); s.src = URL.createObjectURL(new Blob([o0, o1], {type:"text/javascript;charset=utf-8"})); s.charset = "utf-8"; s.onload = ok; s.onerror = () => ko(new Error("moteur illisible")); document.head.appendChild(s); });
+  let c = window.cv;
+  if (c instanceof Promise) c = await c; else if (!c.Mat) await new Promise(r => { c.onRuntimeInitialized = r; });
+  cvm = c;
+  const octets = await modeleP;
+  progression(.8, "Mise en route…");
+  await dormir(30);
+  cvm.FS_createDataFile("/", "m.onnx", octets, true, false, false);
+  net = cvm.readNetFromONNX("m.onnx");
+  empreinteDepuis(null);            // tour de chauffe
+  moteurPret = true;
+  progression(1, "Détecteur prêt.");
+}
+function empreinteDepuis(source){
+  if (source){
+    const vw = source.videoWidth || source.width, vh = source.videoHeight || source.height;
+    if (!vw) return null;
+    const cote = Math.min(vw, vh) * 0.86;
+    gctx.drawImage(source, (vw-cote)/2, (vh-cote)/2, cote, cote, 0, 0, S, S);
+  } else { gctx.fillStyle = "#777"; gctx.fillRect(0, 0, S, S); }
+  const img = gctx.getImageData(0, 0, S, S);
+  const rgba = cvm.matFromImageData(img), rgb = new cvm.Mat();
+  cvm.cvtColor(rgba, rgb, cvm.COLOR_RGBA2RGB);
+  const blob = cvm.blobFromImage(rgb, 1/(255*0.226), new cvm.Size(S, S), new cvm.Scalar(0.485*255, 0.456*255, 0.406*255, 0), false, false);
+  net.setInput(blob);
+  const sortie = net.forward("472");
+  const v = Float32Array.from(sortie.data32F);
+  rgba.delete(); rgb.delete(); blob.delete(); sortie.delete();
+  let n = 0; for (let i = 0; i < DIM; i++) n += v[i]*v[i]; n = Math.sqrt(n) || 1; for (let i = 0; i < DIM; i++) v[i] /= n;
+  return v;
+}
+
+/* ---------- Caméra ---------- */
+const video = $("video"); let flux = null;
+async function ouvrirCamera(){
+  if (flux) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("Ce navigateur ne donne pas accès à la caméra. Ouvrez la page dans Chrome, à une adresse en https.");
+  flux = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}, width:{ideal:1280}, height:{ideal:720}}});
+  video.srcObject = flux; await video.play().catch(()=>{});
+  try{ if (navigator.wakeLock) navigator.wakeLock.request("screen").catch(()=>{}); }catch(e){}
+  ajusterViseur();
+}
+function ajusterViseur(){
+  const vw = video.videoWidth, vh = video.videoHeight; if (!vw) return;
+  const ech = Math.max(innerWidth / vw, innerHeight / vh), cote = Math.min(vw, vh) * 0.86 * ech;
+  const px = Math.min(cote, innerWidth - 24);
+  $("viseur").style.width = $("viseur").style.height = px + "px";
+}
+addEventListener("resize", ajusterViseur); video.addEventListener("loadedmetadata", ajusterViseur);
+
+/* ---------- Déroulé du jeu ---------- */
+let enPause = true, historique = [], dernierVec = null, dernierScores = null;
+const DIRS = {"devant":[0,"Tout droit"], "droite":[90,"À droite"], "gauche":[-90,"À gauche"], "derriere":[180,"Derrière vous"], "devant-droite":[45,"En avant, à droite"], "devant-gauche":[-45,"En avant, à gauche"]};
+
+function afficherEtape(){
+  const i = partie.etape;
+  $("points").innerHTML = ETAPES.map((_, k) => `<i class="${k < i ? "fait" : k === i ? "cours" : ""}"></i>`).join("");
+  $("compte").textContent = Math.min(i, N) + " / " + N;
+  $("fleche").hidden = true; $("trouve").hidden = true;
+  if (i >= N){ $("finTxt").textContent = texteTresor(); $("fin").hidden = false; enPause = true; return; }
+  $("fin").hidden = true;
+  $("enigmeTitre").textContent = "Énigme " + (i+1);
+  $("enigme").textContent = ETAPES[i].enigme;
+  majAide();
+}
+function majAide(){
+  const i = partie.etape; if (i >= N) return;
+  const mur = partie.t0 && Date.now() - partie.t0 >= delaiAide();
+  $("btnAide").hidden = partie.aide || !mur;
+  const b = $("bandeau");
+  if (!partie.aide){ b.hidden = true; return; }
+  b.hidden = false;
+  b.textContent = i === 0 ? "Coup de pouce : " + ETAPES[0].indice2
+    : "Coup de pouce : retournez voir " + ETAPES[i-1].nom + " et visez-le. Une flèche vous montrera où aller.";
+}
+setInterval(() => { if (!$("jeu").hidden && !enPause) majAide(); }, 1000);
+
+function objetTrouve(){
+  const trouve = ETAPES[partie.etape];
+  partie.etape++; partie.aide = false; partie.t0 = Date.now(); sauver();
+  enPause = true; historique = [];
+  try{ navigator.vibrate && navigator.vibrate([80, 60, 160]); }catch(e){}
+  if (partie.etape >= N){ afficherEtape(); return; }
+  $("fleche").hidden = true;
+  $("trouveNom").textContent = "C'était " + trouve.nom + ".";
+  $("trouveEnigme").textContent = ETAPES[partie.etape].enigme;
+  $("trouve").hidden = false;
+}
+$("btnSuite").onclick = () => { partie.t0 = Date.now(); sauver(); afficherEtape(); enPause = false; };
+$("btnAide").onclick = () => { partie.aide = true; sauver(); majAide(); };
+$("btnMasquer").onclick = () => { const b = $("billetEnigme"); b.hidden = !b.hidden; $("btnMasquer").textContent = b.hidden ? "Relire l'énigme" : "Masquer l'énigme"; };
+$("btnRejouer").onclick = () => { recommencer(); afficherEtape(); enPause = false; };
+function recommencer(){ partie = {etape:0, aide:false, t0:Date.now()}; historique = []; sauver(); }
+
+async function boucle(){
+  for(;;){
+    const actif = moteurPret && flux && ((!$("jeu").hidden && !enPause) || !$("parents").hidden);
+    if (!actif){ await dormir(200); continue; }
+    let v = null; try{ v = empreinteDepuis(video); }catch(e){ console.error(e); }
+    if (v){
+      dernierVec = v; dernierScores = scores(v);
+      const vu = decision(dernierScores);
+      historique.push(vu); if (historique.length > 4) historique.shift();
+      const stable = c => historique.filter(x => x === c).length >= 3;
+      if (!$("parents").hidden) majScores(vu);
+      else if (partie.etape < N){
+        const cible = ETAPES[partie.etape].id, relais = partie.etape > 0 ? ETAPES[partie.etape-1].id : null;
+        $("viseur").classList.toggle("chaud", vu === cible);
+        $("etat").textContent = vu === cible ? "On dirait bien que…" : (vu && vu !== relais ? "Pas celui-là." : "Je cherche…");
+        if (stable(cible)) objetTrouve();
+        else {
+          const montrer = partie.aide && relais && stable(relais);
+          if (montrer){
+            const d = DIRS[flecheDe(partie.etape)] || DIRS.devant;
+            $("flecheSvg").style.transform = "rotate(" + d[0] + "deg)";
+            $("flecheTxt").textContent = d[1];
+            $("flecheIndice").textContent = ETAPES[partie.etape].indice2;
+          }
+          $("fleche").hidden = !montrer;
+          $("viseur").style.opacity = montrer ? .25 : 1;
+        }
+      }
+    }
+    await dormir(120);
+  }
+}
+
+/* ---------- Accueil ---------- */
+function erreur(msg){ const e = $("erreur"); e.textContent = msg; e.hidden = !msg; }
+function majAccueil(){
+  $("btnGo").textContent = partie.etape > 0 && partie.etape < N ? "Reprendre la chasse (" + partie.etape + " / " + N + ")" : "Lancer la chasse";
+  $("btnReset").hidden = partie.etape === 0;
+}
+$("btnReset").onclick = () => { recommencer(); majAccueil(); };
+$("btnGo").onclick = async () => {
+  erreur("");
+  try{ await ouvrirCamera(); }
+  catch(e){ erreur(e && e.name === "NotAllowedError" ? "La caméra est bloquée. Touchez le cadenas dans la barre d'adresse, autorisez la caméra, puis réessayez." : "Impossible d'ouvrir la caméra : " + (e && e.message || e)); return; }
+  if (partie.etape >= N) recommencer();
+  if (!partie.t0 || partie.etape === 0 && !partie.aide) partie.t0 = Date.now();
+  sauver();
+  $("accueil").hidden = true; $("jeu").hidden = false;
+  afficherEtape(); enPause = partie.etape >= N;
+};
+
+/* ---------- Réglages parents ---------- */
+let retour = "accueil";
+function ouvrirParents(){
+  retour = $("jeu").hidden ? "accueil" : "jeu";
+  $(retour).hidden = true; $("parents").hidden = false; historique = [];
+  $("scores").innerHTML = CLASSES.map(c => `<div class="score" data-c="${c}"><span>${c}</span><div class="barre"><i></i></div><output>–</output><button class="mini" data-vue="${c}">+ vue</button></div>`).join("");
+  $("fleches").innerHTML = ETAPES.slice(1).map((e, k) => `<label class="champ">De « ${ETAPES[k].id} » vers « ${e.id} »<select data-fl="${e.id}" id="fl-${e.id}">${Object.keys(DIRS).map(d => `<option value="${d}"${flecheDe(k+1) === d ? " selected" : ""}>${DIRS[d][1]}</option>`).join("")}</select></label>`).join("");
+  $("sens").value = reglages.sens; majSens();
+  $("delai").value = Math.round(delaiAide()/1000);
+  $("tresor").value = texteTresor();
+  $("export").hidden = true;
+}
+function majSens(){ $("sensTxt").textContent = ["Très strict : moins de fausses alertes, il faut bien cadrer.", "Strict.", "Normal.", "Tolérant.", "Très tolérant : reconnaît plus facilement, mais peut se tromper."][+reglages.sens + 2]; }
+function majScores(vu){
+  const actx = $("apercu").getContext("2d"); actx.drawImage(grab, 0, 0);
+  for (const el of $("scores").children){
+    const c = el.dataset.c, s = dernierScores[c];
+    el.classList.toggle("vu", vu === c);
+    el.querySelector("i").style.width = Math.max(0, Math.min(100, (s - .4) / .6 * 100)) + "%";
+    el.querySelector("output").textContent = s.toFixed(2);
+  }
+}
+$("btnParents").onclick = ouvrirParents;
+$("compte").onclick = (() => { let n = 0, t = 0; return () => { const m = Date.now(); n = m - t < 600 ? n + 1 : 1; t = m; if (n >= 5){ n = 0; ouvrirParents(); } }; })();
+$("btnFermer").onclick = () => { $("parents").hidden = true; $(retour).hidden = false; historique = []; if (retour === "jeu") afficherEtape(); else majAccueil(); };
+$("scores").onclick = e => {
+  const c = e.target.dataset.vue; if (!c) return;
+  if (!dernierVec){ e.target.textContent = "caméra ?"; return; }
+  (reglages.vues[c] = reglages.vues[c] || []).push(f32versB64(dernierVec));
+  if (reglages.vues[c].length > 12) reglages.vues[c].shift();
+  sauver(); reconstruireRefs(); e.target.textContent = "ajoutée (" + reglages.vues[c].length + ")";
+};
+$("sens").oninput = e => { reglages.sens = +e.target.value; majSens(); sauver(); };
+$("fleches").onchange = e => { if (e.target.dataset.fl){ reglages.fleches[e.target.dataset.fl] = e.target.value; sauver(); } };
+$("delai").onchange = e => { const v = +e.target.value; if (v >= 5){ reglages.delai = v; sauver(); } };
+$("tresor").onchange = e => { reglages.tresor = e.target.value.trim(); sauver(); };
+$("btnEffacer").onclick = () => { reglages.vues = {}; sauver(); reconstruireRefs(); $("btnEffacer").textContent = "Vues ajoutées effacées"; };
+$("btnCopier").onclick = async () => {
+  const txt = JSON.stringify(reglages), ta = $("export");
+  try{ await navigator.clipboard.writeText(txt); $("btnCopier").textContent = "Réglages copiés"; }
+  catch(e){ ta.hidden = false; ta.value = txt; ta.select(); }
+};
+
+/* ---------- Démarrage ---------- */
+majAccueil();
+if (location.hash === "#parents") ouvrirParents();
+chargerMoteur().then(() => { $("btnGo").disabled = false; $("jauge").hidden = true; })
+  .catch(e => { erreur("Le détecteur n'a pas pu se charger (" + (e && e.message || e) + "). Vérifiez la connexion puis rechargez la page."); });
+boucle();
+</script>
+</body>
+</html>
