@@ -133,7 +133,6 @@ input[type=range]{width:100%;accent-color:var(--safran)}
     <div class="jauge" id="jauge"><i></i></div>
     <button class="btn" id="btnGo" disabled>Lancer la chasse</button>
     <button class="btn btn-2" id="btnReset" hidden>Recommencer depuis le début</button>
-    <button class="lien-parents" id="btnParents">Réglages parents</button>
   </div>
 </main>
 
@@ -191,6 +190,8 @@ input[type=range]{width:100%;accent-color:var(--safran)}
   <section id="blocEnvoi" hidden>
     <h3>Message du trésor</h3>
     <input type="text" id="tresor" placeholder="Où est caché le trésor ?" aria-label="Message du trésor">
+    <label class="champ" for="age">Âge des joueurs (pour doser les énigmes)
+      <input type="number" id="age" min="3" max="99" step="1" placeholder="ans" style="width:5.5em"></label>
     <h3>Envoyer à Claude</h3>
     <p>Enregistre un fichier « chasse-pack.json » dans les Téléchargements du téléphone. Joignez-le dans la conversation avec Claude : il écrira les 5 énigmes et mettra le jeu à jour pour tous les téléphones.</p>
     <button class="btn" id="btnEnvoi">Créer le fichier pour Claude</button>
@@ -417,7 +418,7 @@ function dessinerParents(){
     return `<div class="score" data-c="${c}"><span>${nom}${b ? ` <small>(${n})</small>` : ""}</span><div class="barre"><i></i></div><output>–</output>${boutons}</div>`;
   }).join("");
   $("blocEnvoi").hidden = !b;
-  if (b){ $("tresor").value = brouillon.tresor || ""; const pret = brouillon.objets.every(o => o.nb > 0); $("btnEnvoi").disabled = !pret; $("etatEnvoi").textContent = pret ? "" : "Il faut au moins une vue pour chacun des 5 objets."; }
+  if (b){ $("tresor").value = brouillon.tresor || ""; $("age").value = brouillon.age || ""; const pret = brouillon.objets.every(o => o.nb > 0); $("btnEnvoi").disabled = !pret; $("etatEnvoi").textContent = pret ? "" : "Il faut au moins une vue pour chacun des 5 objets."; }
   $("aideReset").textContent = b ? "Vous pouvez tout effacer et recommencer la saisie des 5 objets." : "Efface les 5 objets actuels sur ce téléphone pour en enregistrer 5 nouveaux. Les autres téléphones gardent le jeu en ligne tant que Claude n'a pas publié le nouveau.";
   $("btnNouveau").textContent = "Réinitialiser les 5 objets"; armeReset = 0;
   $("btnAbandon").hidden = !b || !PACK;
@@ -433,7 +434,6 @@ function majScores(vu){
     el.querySelector("output").textContent = s < 0 ? "–" : s.toFixed(2);
   }
 }
-$("btnParents").onclick = ouvrirParents;
 $("compte").onclick = (() => { let n = 0, t = 0; return () => { const m = Date.now(); n = m - t < 600 ? n + 1 : 1; t = m; if (n >= 5){ n = 0; ouvrirParents(); } }; })();
 $("btnFermer").onclick = () => { $("parents").hidden = true; $(retour).hidden = false; historique = []; if (retour === "jeu"){ afficherEtape(); enPause = partie.etape >= N; } else majAccueil(); };
 
@@ -461,8 +461,9 @@ $("scores").onclick = e => {
   sauverBrouillon(); activer(); dessinerParents();
 };
 $("tresor").onchange = e => { if (brouillon){ brouillon.tresor = e.target.value.trim(); sauverBrouillon(); activer(); } };
+$("age").onchange = e => { if (brouillon){ const v = parseInt(e.target.value, 10); brouillon.age = v > 0 ? v : null; sauverBrouillon(); } };
 $("btnEnvoi").onclick = () => {
-  const txt = JSON.stringify({v:2, type:"brouillon", id:brouillon.id, tresor:brouillon.tresor, rien:brouillon.rien, objets:brouillon.objets});
+  const txt = JSON.stringify({v:2, type:"brouillon", id:brouillon.id, tresor:brouillon.tresor, age:brouillon.age || null, rien:brouillon.rien, objets:brouillon.objets});
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], {type:"application/json"})); a.download = "chasse-pack.json";
   document.body.appendChild(a); a.click(); a.remove();
   $("etatEnvoi").textContent = "Fichier « chasse-pack.json » enregistré dans les Téléchargements (" + Math.round(txt.length/1024) + " Ko). Joignez-le dans la conversation avec Claude.";
