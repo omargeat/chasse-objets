@@ -316,9 +316,11 @@ function empreinteDepuis(source, facteur){
 /* ---------- Caméra ---------- */
 const video = $("video"); let flux = null;
 async function ouvrirCamera(){
-  if (flux) return;
+  if (flux && flux.getVideoTracks().some(t => t.readyState === "live")) return;
+  if (flux){ try{ flux.getTracks().forEach(t => t.stop()); }catch(e){} flux = null; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("Ce navigateur ne donne pas accès à la caméra. Ouvrez la page dans Chrome, à une adresse en https.");
   flux = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}, width:{ideal:1280}, height:{ideal:720}}});
+  flux.getVideoTracks().forEach(t => t.addEventListener("ended", () => { if (document.visibilityState === "visible") ouvrirCamera().catch(()=>{}); }));
   video.srcObject = flux; await video.play().catch(()=>{});
   try{ if (navigator.wakeLock) navigator.wakeLock.request("screen").catch(()=>{}); }catch(e){}
   ajusterViseur();
@@ -330,6 +332,7 @@ function ajusterViseur(){
   const px = Math.min(cote, innerWidth - 24);
   $("viseur").style.width = $("viseur").style.height = px + "px";
 }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && flux && !flux.getVideoTracks().some(t => t.readyState === "live")) ouvrirCamera().catch(()=>{}); });
 addEventListener("resize", ajusterViseur); video.addEventListener("loadedmetadata", ajusterViseur);
 
 /* ---------- Déroulé du jeu ---------- */
@@ -403,7 +406,7 @@ async function ouvrirParents(){
   retour = $("jeu").hidden ? "accueil" : "jeu";
   $(retour).hidden = true; $("parents").hidden = false; historique = [];
   dessinerParents();
-  if (!flux){ try{ await ouvrirCamera(); $("erreurP").hidden = true; } catch(e){ $("erreurP").textContent = messageCamera(e); $("erreurP").hidden = false; } }
+  { try{ await ouvrirCamera(); $("erreurP").hidden = true; } catch(e){ $("erreurP").textContent = messageCamera(e); $("erreurP").hidden = false; } }
 }
 function dessinerParents(){
   const b = !!brouillon;
@@ -447,7 +450,12 @@ $("scores").onclick = e => {
   const c = e.target.dataset.vue; if (!c || !brouillon) return;
   if (!moteurPret || !flux || !video.videoWidth){ e.target.textContent = "caméra ?"; return; }
   // Trois cadrages par vue (large, moyen, serré) pour tolérer la distance.
-  const vues = [0.86, 0.68, 0.54].map(f => f32versB64(empreinteDepuis(video, f)));
+  const v0 = empreinteDepuis(video, 0.86);
+  if (c !== "rien"){
+    const autres = brouillon.objets.filter((o, i) => CLASSES[i] !== c && o.vues.length);
+    if (autres.length && meilleur(v0, assembler(autres.flatMap(o => o.vues))) > 0.985){ $("erreurP").textContent = "Cette vue est identique à celle d'un autre objet : la caméra semble figée. Rechargez la page, rouvrez les réglages et refaites cette vue."; $("erreurP").hidden = false; return; }
+  }
+  const vues = [f32versB64(v0)].concat([0.68, 0.54].map(f => f32versB64(empreinteDepuis(video, f))));
   if (c === "rien") brouillon.rien.push(...vues);
   else {
     const o = brouillon.objets[CLASSES.indexOf(c)]; if (o.nb >= MAX_VUES) return;
